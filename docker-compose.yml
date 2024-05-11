@@ -1,0 +1,11 @@
+version: '3'
+services:
+  sample-service:
+    image: nvcr.io/nvidia/tritonserver:24.03-py3
+    ports:
+      - 8000:8000
+      - 8001:8001
+      - 8002:8002
+    volumes:
+      - $MODEL_REPOSITORY:/models
+    command: ["tritonserver", "--model-repository=/models"]  

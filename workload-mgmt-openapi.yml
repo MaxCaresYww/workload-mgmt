@@ -1,0 +1,285 @@
+openapi: 3.0.0
+info:
+  title: Model Management API
+  version: 1.0.0
+paths:
+  /api/wlmgmt/v1/models:
+    get:
+      summary: Retrieve all models
+      responses:
+        '200':
+          description: Successful response with all models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:                
+                  $ref: '#/components/schemas/modelOut'
+              examples:
+                example1:
+                  summary: Example response
+                  value:
+                  - name: model1
+                    group: LLM
+                    image: nvcr.io/nvidia/tritonserver:24.03-py3
+                    numOfGpus: 1
+                    status: running
+                    url: http://10.42.0.10:8000
+                  - name: model2
+                    group: StabeDiffusion
+                    image: nvcr.io/nvidia/tritonserver:24.03-py3
+                    numOfGpus: 1
+                    status: running
+                    url: http://10.42.0.11:8000
+        '404':
+          description: There is not any models
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+    post:
+      summary: Create a new model, model shall already be available in model repository
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/modelIn'
+      responses:
+        '201':
+          description: Model created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/modelOut'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+  /api/wlmgmt/v1/models/{name}:
+    get:
+      summary: Retrieve a specific model by name
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+          description: Name of the model
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/modelOut'
+        '404':
+          description: Model not found
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'     
+    delete:
+      summary: Delete a specific model by name
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+          description: Name of the model
+      description: Delete a specific model by name
+      responses:
+        '204':
+          description: Successful response
+        '404':
+          description: Model not found
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+    patch:
+      summary: Update a specific model by name
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+          description: Name of the model
+      description: Update a specific model by name
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/modelPatch'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/modelOut'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '403':
+          description: Update forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+        '404':
+          description: Model not found
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+    post:
+      summary: Post a specific action for the model
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+          description: Name of the model
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "action"
+              properties:
+                action:
+                  type: string
+                  description: Action to be performed
+                  enum:
+                    - start # Start triton inference server for this model
+                    - stop  # Stop mapped triton inference server
+      responses:
+        '202':
+          description: >
+            Request accepted, user need monitor the model status to follow the
+            progress of the operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/modelOut'
+        '404':
+          description: Model not found
+        '500':
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorMessage'
+
+components:
+  schemas:
+    modelIn:
+      type: object
+      required:
+        - "name"
+        - "group"
+        - "image"
+      properties:
+        name:
+          type: string
+          description: Model name
+        group:
+          type: string
+          description: Model group
+          enum:
+            - "LLM"
+            - "StabeDiffusion"
+        image:
+          type: string
+          description: Container image address for the model
+        numOfGpus:
+          type: integer
+          description: Number of GPUs required for the model
+          default: 1
+    modelPatch:
+      type: object
+      properties:
+        group:
+          type: string
+          description: Model group
+          enum:
+            - "LLM"
+            - "StabeDiffusion"
+        image:
+          type: string
+          description: Container image address for the model
+        numOfGpus:
+          type: integer
+          description: Number of GPUs required for the model
+          default: 1
+    modelOut:
+      type: object
+      required:
+        - "name"
+        - "group"
+        - "image"
+        - "url"
+        - "status"
+      properties:
+        name:
+          type: string
+          description: Model name
+        group:
+          type: string
+          description: Model group
+          enum:
+            - "LLM"
+            - "StabeDiffusion"
+        image:
+          type: string
+          description: Container image address for the model
+        numOfGpus:
+          type: integer
+          description: Number of GPUs required for the model
+          default: 1
+        status:
+          type: string
+          description: Status of the model
+          enum:
+            - initial # Model is created in the system but there is not any mapped triton inference server running
+            - running # Model is created in the system and there is alread mapped triton inference server running correctly
+            - failed  # Model is created and there is triton inference server mapped but it is not running correctly
+        url:
+          type: string
+          description: URL to access the model
+    errorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
